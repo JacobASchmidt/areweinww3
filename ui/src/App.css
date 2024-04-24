@@ -33,8 +33,12 @@ body, html {
   animation: pulse 2s infinite;
 }
 
-.status-column p {
+.status-column h2 {
   font-size: 1.5em;
+}
+
+.status-column p {
+  font-size: 1em;
 }
 
 .news-column {

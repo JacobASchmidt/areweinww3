@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 
-function fetchHeadline() {
+function fetchStatus() {
+  return fetch("api/v1/status").then((resp) => resp.json());
   const statuses = [
     {
       status: "YES",
@@ -21,29 +22,33 @@ function fetchHeadline() {
 
 function App() {
 
-  const {status, statusColor, subLine} = fetchHeadline();
+  const [status, setStatus] = useState({status: '', textColor: '', subLine: '', explanation: ''});
 
-  const [inConflict, setInConflict] = useState(false); // Default state is 'NO'
+  useEffect(() => {
+    fetchStatus().then(setStatus);
+  }, []);
+
+
   const articles = [
-    { title: "Article Title 1", description: "Detailed analysis of recent global events." },
-    { title: "Article Title 2", description: "Expert opinions on geopolitical tensions." },
-    { title: "Article Title 3", description: "Historical context behind today's conflicts." },
-    { title: "Article Title 4", description: "Predictive insights into future global trends." }
+    { headline: "Article Title 1", description: "Detailed analysis of recent global events." },
+    { headline: "Article Title 2", description: "Expert opinions on geopolitical tensions." },
+    { headline: "Article Title 3", description: "Historical context behind today's conflicts." },
+    { headline: "Article Title 4", description: "Predictive insights into future global trends." }
   ];
 
   return (
     <div className="container">
       <div className="status-column">
-        <h1 style={{color: statusColor}}>{status}</h1>
-        <p>{subLine}</p>
-        <button onClick={() => setInConflict(!inConflict)}>
-          Toggle Conflict Status
-        </button>
+        <h1 style={{color: status.textColor}}>{status.status}</h1>
+        <h2>{status.subLine}</h2>
+        <p>
+          {status.explanation}
+        </p>
       </div>
       <div className="news-column">
         {articles.slice(0, 2).map((article, index) => (
           <div key={index} className="article">
-            <h2>{article.title}</h2>
+            <h2>{article.headline}</h2>
             <p>{article.description}</p>
           </div>
         ))}
@@ -51,7 +56,7 @@ function App() {
       <div className="news-column">
         {articles.slice(2).map((article, index) => (
           <div key={index} className="article">
-            <h2>{article.title}</h2>
+            <h2>{article.headline}</h2>
             <p>{article.description}</p>
           </div>
         ))}

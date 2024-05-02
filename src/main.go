@@ -3,18 +3,24 @@ package main
 import (
 	"log"
 	"math/rand"
+	"time"
 
+	"github.com/JacobASchmidt/areweinww3/src/controllers"
+	"github.com/JacobASchmidt/areweinww3/src/models"
 	"github.com/gofiber/fiber/v3"
+	"github.com/joho/godotenv"
 )
 
 type Status struct {
-	Status      string `json:"status"`
-	TextColor   string `json:"textColor"`
-	SubLine     string `json:"subLine"`
-	Explanation string `json:"explanation"`
+	Id          int       `json:"id"`
+	Status      string    `json:"status"`
+	SubLine     string    `json:"subLine"`
+	Explanation string    `json:"explanation"`
+	Date        time.Time `json:"date"`
 }
 
 type Article struct {
+	Id          int    `json:"id"`
 	Headline    string `json:"headline"`
 	Description string `json:"Description"`
 }
@@ -25,13 +31,11 @@ func status() Status {
 	statuses := []Status{
 		{
 			Status:      "YES",
-			TextColor:   "#e63946",
 			SubLine:     "Global Conflict",
 			Explanation: "Quite a long drawn out explanation about how israel nuked iran or something",
 		},
 		{
 			Status:      "NO",
-			TextColor:   "#4caf50",
 			SubLine:     "Regional Wars",
 			Explanation: "Quite a long drawn out explanation about how israel hasn't nuked iran or something",
 		},
@@ -51,7 +55,14 @@ func articles() []Article {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	app := fiber.New()
+	db := models.GetInstance()
+	defer db.Close()
 
 	app.Use(func(c fiber.Ctx) error {
 		log.Print(c.Route().Method, c.Route().Path)
@@ -65,10 +76,7 @@ func main() {
 		return c.JSON(articles())
 	})
 
-	app.Get("api/v1/status", func(c fiber.Ctx) error {
-		log.Print("in status")
-		return c.JSON(status())
-	})
+	app.Get("api/v1/status", controllers.StatusController)
 
 	log.Fatal(app.Listen(":3000"))
 }

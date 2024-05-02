@@ -4,7 +4,7 @@ npm run build && \
 cd .. && \
 rm -rf build && \
 mkdir build && \
-cp ui/build/* build -r && \
+cp -r ui/build/* build  && \
 echo "building server" && \
 cd src && \
 go build && \

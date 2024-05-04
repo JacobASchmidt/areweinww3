@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-function fetchStatus() {
-  return fetch("api/v1/status").then((resp) => resp.json());
-}
-
 function App() {
   const [status, setStatus] = useState({
     status: "",
@@ -12,31 +8,27 @@ function App() {
     subLine: "",
     explanation: "",
   });
+  const [articles, setArticles] = useState([]);
+
+  const fetchStatus = async () => {
+    const response = await fetch(
+      "http://localhost:3000/api/v1/status"
+    );
+    if (!response.ok) {
+      console.error("Failed to fetch status");
+      console.log(await response.text());
+      return;
+    }
+    const data = await response.json();
+    console.log("Status: ", data.status);
+    console.log("Articles: ", data.articles);
+    setStatus(data.status);
+    setArticles(data.articles);
+  };
 
   useEffect(() => {
-    fetchStatus().then(setStatus);
+    fetchStatus();
   }, []);
-
-  const articles = [
-    {
-      headline: "Article Title 1",
-      description: "Detailed analysis of recent global events.",
-    },
-    {
-      headline: "Article Title 2",
-      description: "Expert opinions on geopolitical tensions.",
-    },
-    {
-      headline: "Article Title 3",
-      description:
-        "Historical context behind today's conflicts.",
-    },
-    {
-      headline: "Article Title 4",
-      description:
-        "Predictive insights into future global trends.",
-    },
-  ];
 
   return (
     <div className="container">

@@ -71,10 +71,7 @@ func main() {
 
 	app.Static("/", "../build")
 
-	app.Get("api/v1/articles", func(c fiber.Ctx) error {
-		log.Print("in articles")
-		return c.JSON(articles())
-	})
+	app.Get("api/v1/articles", controllers.ArticlesController)
 
 	app.Get("api/v1/status", controllers.StatusController)
 

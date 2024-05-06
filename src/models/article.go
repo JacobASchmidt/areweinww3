@@ -4,47 +4,49 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 )
 
-type Article struct {
-	Id          int    `json:"id"`
-	Headline    string `json:"headline"`
-	Description string `json:"Description"`
+type NewsApiHeadline struct {
+	Source struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"source"`
+	Author      string    `json:"author"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	URL         string    `json:"url"`
+	URLToImage  string    `json:"urlToImage"`
+	PublishedAt time.Time `json:"publishedAt"`
+	Content     string    `json:"content"`
 }
 
-func (a Article) ToString() string {
-	return fmt.Sprintf("Headline: %s, Description: %s", a.Headline, a.Description)
+func (h NewsApiHeadline) ToString() string {
+	return fmt.Sprintf("Title: %s, Description: %s", h.Title, h.Description)
 }
 
 func setUpArticlesTable(db *sql.DB) {
 	articlesQuery := `
 		CREATE TABLE IF NOT EXISTS articles (
 			id INTEGER PRIMARY KEY, 
-			headline TEXT, 
-			description TEXT
+			source_id TEXT,
+			source_name TEXT,
+			author TEXT,
+			title TEXT,
+			description TEXT,
+			url TEXT,
+			urlToImage TEXT,
+			publishedAt TIMESTAMP,
+			content TEXT
 		)`
 
 	_, err := db.Exec(articlesQuery)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	//Insert some test articles
-	articles := []Article{
-		{Headline: "Article Title 1", Description: "Detailed analysis of recent global events."},
-		{Headline: "Article Title 2", Description: "Expert opinions on geopolitical tensions."},
-		{Headline: "Article Title 3", Description: "Historical context behind today's conflicts."},
-		{Headline: "Article Title 4", Description: "Predictive insights into future global trends."},
-	}
-	for _, article := range articles {
-		_, err := db.Exec("INSERT INTO articles (headline, description) VALUES (?, ?)", article.Headline, article.Description)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 }
 
-func (d *Database) GetArticles() []Article {
+func (d *Database) GetArticles() []NewsApiHeadline {
 	query := "SELECT * FROM articles LIMIT 10"
 	rows, err := d.db.Query(query)
 	if err != nil {
@@ -52,14 +54,61 @@ func (d *Database) GetArticles() []Article {
 	}
 	defer rows.Close()
 
-	var articles []Article
+	var articles []NewsApiHeadline
 	for rows.Next() {
-		var article Article
-		err := rows.Scan(&article.Id, &article.Headline, &article.Description)
+		var article NewsApiHeadline
+		var id int
+		err = rows.Scan(
+			&id,
+			&article.Source.ID,
+			&article.Source.Name,
+			&article.Author,
+			&article.Title,
+			&article.Description,
+			&article.URL,
+			&article.URLToImage,
+			&article.PublishedAt,
+			&article.Content,
+		)
 		if err != nil {
 			log.Fatal(err)
 		}
 		articles = append(articles, article)
 	}
 	return articles
+}
+
+func (d *Database) InsertArticle(article NewsApiHeadline) error {
+	query := `INSERT INTO articles (source_id, source_name, author, title, description, url, urlToImage, publishedAt, content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	statement, err := d.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(
+		article.Source.ID,
+		article.Source.Name,
+		article.Author,
+		article.Title,
+		article.Description,
+		article.URL,
+		article.URLToImage,
+		article.PublishedAt,
+		article.Content,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Database) DeleteArticles() error {
+	query := `DELETE FROM articles`
+	_, err := d.db.Exec(query)
+	if err != nil {
+		return err
+	}
+	return nil
 }

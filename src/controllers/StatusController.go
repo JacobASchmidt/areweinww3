@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -12,6 +13,11 @@ import (
 	"github.com/gofiber/fiber/v3"
 	openai "github.com/sashabaranov/go-openai"
 )
+
+type StatusResponse struct {
+	Status   models.Status            `json:"status"`
+	Articles []models.NewsApiHeadline `json:"articles"`
+}
 
 func StatusController(c fiber.Ctx) error {
 	log.Print("Status request.")
@@ -21,13 +27,40 @@ func StatusController(c fiber.Ctx) error {
 
 	if time.Since(lastStatus.Date) < 5*time.Minute {
 		log.Print("Responding with fresh status from DB.")
-		return c.JSON(lastStatus)
+		articles := db.GetArticles()
+		response := StatusResponse{
+			Status:   lastStatus,
+			Articles: articles,
+		}
+		return c.JSON(response)
 	}
-	log.Print("Status is stale. Requesting new status from OpenAI.")
+	log.Print("Status is stale. Fetching articles and and getting new status from OpenAI")
 
-	articles := db.GetArticles()
+	//Get Articles
+	newsApiKey := os.Getenv("NEWSAPI_API_KEY")
+	if newsApiKey == "" {
+		log.Fatal("NEWSAPI_API_KEY is not set.")
+	}
+
+	url := fmt.Sprintf("https://newsapi.org/v2/top-headlines?country=us&category=general&apiKey=%s", newsApiKey)
+	newsApiResp, err := http.Get(url)
+	if err != nil {
+		log.Print(err)
+		return c.Status(500).SendString(err.Error())
+	}
+
+	var newsApiResponse NewsApiResponse
+	err = json.NewDecoder(newsApiResp.Body).Decode(&newsApiResponse)
+	if err != nil {
+		log.Print(err)
+		return c.Status(500).SendString(err.Error())
+	}
+	newsApiResp.Body.Close()
+
+	db.DeleteArticles()
 	var stringArticles string
-	for _, article := range articles {
+	for _, article := range newsApiResponse.Articles {
+		db.InsertArticle(article)
 		stringArticles += article.ToString() + "\n"
 	}
 
@@ -68,6 +101,14 @@ func StatusController(c fiber.Ctx) error {
 	}
 	latestStatus.Date = time.Now()
 	err = db.InsertStatus(latestStatus)
+	if err != nil {
+		fmt.Printf("InsertStatus error: %v\n", err)
+		return c.Status(500).SendString(err.Error())
+	}
 
-	return c.JSON(latestStatus)
+	statusResponse := StatusResponse{
+		Status:   latestStatus,
+		Articles: newsApiResponse.Articles,
+	}
+	return c.JSON(statusResponse)
 }
